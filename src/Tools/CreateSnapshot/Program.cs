@@ -18,19 +18,17 @@ namespace CreateSnapshot
         {
             try
             {
-                if(args.Length < 2)
-                {
-                    Console.WriteLine("Not enough parameters.");
-                }
+                var path = args.Length > 1 ? args[1] : Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var tag = args.Length > 2 ? args[2] : "";
+                var snapTag = "snap_" + DateTime.UtcNow.ToString("yyyy_MM_dd_HH_mm_ss") + tag;
                 switch (args[0])
                 {
-                    case "zip":
-                        CreateSnapshotOfRegistries(args[1]);
-                        CreateSnapshotArchive(args[1], tag);
+                    case "-push":
+                        //CreateSnapshotOfRegistries(path);
+                        CreateSnapshotArchive(path, snapTag);
                         break;
-                    case "unzip":
-                        UnzipSnapshot(args[1]);
+                    case "-pop":
+                        UnzipSnapshot(path);
                         //var registryJson = File.ReadAllText(Path.Combine(args[1], "snapshots", "registryKeys.json"));
                         //SaveRegistryValues(registryJson);
                         break;
@@ -38,54 +36,45 @@ namespace CreateSnapshot
                         break;
                 }
                 //CreateSnapshotArchive(args[1], tag);
-                UnzipSnapshot(args[1]);
+                //UnzipSnapshot(args[1]);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine($"CreateSnapshot error: {e}");
+                //Console.ReadKey();
             }
-            Console.WriteLine("end");
-            Console.ReadKey();
-
-            
         }
 
-        private static void CreateSnapshotArchive(string nhmRootPath, string tag)
+        private static bool IsValidSnapshotPath(string path)
         {
-            var snapshotsLocation = Path.Combine(nhmRootPath, "snapshots");
+            return !path.Contains("tools")
+                && !path.Contains("snapshots")
+                && !path.Contains("_tmp");
+        }
+
+        private static void CreateSnapshotArchive(string nhmRootPath, string snapTag)
+        {
+            var snapshotsLocation = Path.Combine(nhmRootPath, "tools");
             if (!Directory.Exists(snapshotsLocation)) Directory.CreateDirectory(snapshotsLocation);
             var filesToPack = Directory.GetFiles(nhmRootPath, "*.*", SearchOption.AllDirectories)
-                .Where(path => !path.Contains("tools"))
-                .Where(path => !path.Contains("snapshots"));
+                .Where(IsValidSnapshotPath);
 
-            string archiveFileName = $"{DateTime.UtcNow.ToString("dd_MM_yyyy_HH_mm_ss")}.zip";
+
+            string archiveFileName = $"{snapTag}.zip";
             Console.Write($"Preparing logs archive file '{archiveFileName}'...");
 
             var archivePath = Path.Combine(snapshotsLocation, archiveFileName);
-
             using (var fileStream = new FileStream(archivePath, FileMode.Create))
             using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, true))
             {
                 foreach (var filePath in filesToPack)
                 {
-                    var entryPath = filePath.Replace(nhmRootPath, "");
-                    entryPath = entryPath.Substring(1);
+                    var entryPath = filePath.Replace(nhmRootPath, "").Substring(1);
                     var zipFile = archive.CreateEntry(entryPath);
-                    byte[] fileRawBytes;
-                    if (filePath.Contains("logs"))
-                    {
-                        File.Copy(filePath, "tmpLog.txt");
-                        fileRawBytes = File.ReadAllBytes("tmpLog.txt");
-                        File.Delete("tmpLog.txt");
-                    }
-                    else
-                    {
-                        fileRawBytes = File.ReadAllBytes(filePath);
-                    }
+                    using (var readFile = File.OpenRead(filePath))
                     using (var entryStream = zipFile.Open())
-                    using (var b = new BinaryWriter(entryStream))
                     {
-                        b.Write(fileRawBytes);
+                        readFile.CopyTo(entryStream);
                     }
                 }
             }
@@ -132,28 +121,34 @@ namespace CreateSnapshot
             File.WriteAllText(Path.Combine(snapshotsLocation, "registryKeys.json"), serializedRegistries);
         }
 
-        private static void UnzipSnapshot(string nhmRootPath)
+        private static void UnzipSnapshot(string snapshotPath)
         {
-            var snapshotLocation = new DirectoryInfo(Path.Combine(nhmRootPath, "snapshots"));
-            var lastSnapshot = snapshotLocation.GetFiles()
-             .OrderByDescending(snapshot => snapshot.LastWriteTime)
-             .First();
+            var nhmRootPath = new Uri(Path.Combine(snapshotPath, @"..\..\")).LocalPath;
+            var tmpMove = Path.Combine(nhmRootPath, "_tmp");
+            if (Directory.Exists(tmpMove)) Directory.Delete(tmpMove, true);
+            if (!Directory.Exists(tmpMove)) Directory.CreateDirectory(tmpMove);
 
             var directoriesToDelete = Directory.GetDirectories(nhmRootPath)
-                .Where(path => !path.Contains("tools"))
-                .Where(path => !path.Contains("snapshots"));
-            foreach (var directory in directoriesToDelete)
+                .Where(IsValidSnapshotPath);
+            foreach (var directoryPath in directoriesToDelete)
             {
-                Directory.Delete(directory, true);
+                var subPath = directoryPath.Replace(nhmRootPath, "");
+                var moveToPath = Path.Combine(tmpMove, subPath);
+                Console.WriteLine($"Directory '{directoryPath}' -> '{moveToPath}'");
+                Directory.Move(directoryPath, moveToPath);
             }
 
-            var filesToDelete = Directory.GetFiles(nhmRootPath);
-            foreach (var file in filesToDelete)
+            var filesToDelete = Directory.GetFiles(nhmRootPath)
+                .Where(IsValidSnapshotPath);
+            foreach (var filePath in filesToDelete)
             {
-                File.Delete(file);
+                var fileName = Path.GetFileName(filePath);
+                var moveToPath = Path.Combine(tmpMove, fileName);
+                Console.WriteLine($"File '{filePath}' -> '{moveToPath}'");
+                File.Move(filePath, moveToPath);
             }
 
-            ZipFile.ExtractToDirectory(lastSnapshot.FullName, nhmRootPath);
+            ZipFile.ExtractToDirectory(snapshotPath, nhmRootPath);
         }
 
         private static void SaveRegistryValues(string registryJson)
