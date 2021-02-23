@@ -242,11 +242,12 @@ namespace NHMCore.Utils
                 maxTask.Wait();
                 try
                 {
+                    var timeMilisecond = DateTime.UtcNow.Millisecond;
                     // Create archive
-                    if (!CreateLogArchive()) return false;
+                    if (!CreateLogArchive(timeMilisecond)) return false;
 
                     // Upload archive
-                    var tmpZipPath = Paths.RootPath($"tmp._archive_logs.zip");
+                    var tmpZipPath = Paths.RootPath($"{timeMilisecond}._archive_logs.zip");
                     var res2 = await UploadLogArchive(tmpZipPath, uuid);
                     if (!res2) return false;
 
@@ -275,7 +276,7 @@ namespace NHMCore.Utils
         }
 
 
-        private static bool CreateLogArchive()
+        private static bool CreateLogArchive(int tmpNumber)
         {
             try
             {
@@ -285,7 +286,7 @@ namespace NHMCore.Utils
                     FileName = exePath,
                     WindowStyle = ProcessWindowStyle.Minimized,
                     UseShellExecute = true,
-                    Arguments = Path.GetFileName(Paths.AppRoot),
+                    Arguments = $"{Path.GetFileName(Paths.AppRoot)} {tmpNumber}",
                     CreateNoWindow = true
                 };
                 Logger.Info("Log-Report", $"Created log report with: {startLogInfo.FileName} - arguments: {startLogInfo.Arguments}");

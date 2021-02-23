@@ -86,7 +86,8 @@ namespace CreateLogReport
                 .ToList();
 
             //Console.WriteLine(filesToPack.Count);
-            string archiveFileName = "tmp._archive_logs.zip";
+            var tmpName = args.Length > 1 ? args[1] : "tmp";
+            string archiveFileName = $"{tmpName}._archive_logs.zip";
             Console.Write($"Preparing logs archive file '{archiveFileName}'...");
 
             const string tmpLocked = "tmpLocked";
