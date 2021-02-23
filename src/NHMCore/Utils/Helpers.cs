@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NHMCore.Utils
@@ -233,29 +234,37 @@ namespace NHMCore.Utils
                 Logger.Error("NICEHASH", "VisitLink error: " + ex.Message);
             }
         }
-
+        private static SemaphoreSlim maxTask = new SemaphoreSlim(1,1);
         public static async Task<bool> CreateAndUploadLogReport(string uuid)
         {
             try
             {
-                // Create archive
-                if (!CreateLogArchive()) return false;
-
-                // Upload archive
-                var tmpZipPath = Paths.RootPath($"tmp._archive_logs.zip");
-                var res2 = await UploadLogArchive(tmpZipPath, uuid);
-                if (!res2) return false;
-
-                // Delete archive
+                maxTask.Wait();
                 try
                 {
-                    File.Delete(tmpZipPath);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Log-Report", $"Unable to delete log archive: {ex.Message}");
-                }
+                    // Create archive
+                    if (!CreateLogArchive()) return false;
 
+                    // Upload archive
+                    var tmpZipPath = Paths.RootPath($"tmp._archive_logs.zip");
+                    var res2 = await UploadLogArchive(tmpZipPath, uuid);
+                    if (!res2) return false;
+
+                    // Delete archive
+                    try
+                    {
+                        File.Delete(tmpZipPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Log-Report", $"Unable to delete log archive: {ex.Message}");
+                    }
+
+                }
+                finally
+                {
+                    maxTask.Release();
+                }
                 return true;
             }
             catch (Exception ex)
