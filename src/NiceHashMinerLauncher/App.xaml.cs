@@ -313,11 +313,11 @@ namespace NiceHashMiner
                     try
                     {
                         if (!isFirstRun) startInfo.Arguments = startInfo.Arguments.Replace("-updated", "");
-                        isFirstRun = false;
                         using (var niceHashMiner = new Process { StartInfo = startInfo })
                         {
                             var hasStarted = niceHashMiner?.Start();
                             niceHashMiner?.WaitForExit();
+                            isFirstRun = false;
                             // TODO 
                             Console.WriteLine(niceHashMiner.ExitCode);
                             //in case of crash try to restart the program
