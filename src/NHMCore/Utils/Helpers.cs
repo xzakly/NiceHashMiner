@@ -247,7 +247,7 @@ namespace NHMCore.Utils
                     if (!CreateLogArchive(timeMilisecond)) return false;
 
                     // Upload archive
-                    var tmpZipPath = Paths.RootPath($"{timeMilisecond}._archive_logs.zip");
+                    var tmpZipPath = Paths.RootPath($"tmp.{timeMilisecond}._archive_logs.zip");
                     var res2 = await UploadLogArchive(tmpZipPath, uuid);
                     if (!res2) return false;
 
