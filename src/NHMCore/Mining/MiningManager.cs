@@ -1,10 +1,8 @@
 ﻿using NHM.Common;
 using NHM.Common.Enums;
-using NHM.MinerPlugin;
 using NHMCore.ApplicationState;
 using NHMCore.Configs;
 using NHMCore.Mining.Grouping;
-using NHMCore.Mining.Plugins;
 using NHMCore.Notifications;
 using NHMCore.Switching;
 using NHMCore.Utils;
@@ -28,7 +26,6 @@ namespace NHMCore.Mining
         // assume we have internet
         private static bool _isConnectedToInternet = true;
 
-        private static object _lock = new object();
         public static bool IsMiningEnabled => _miningDevices.Count > 0;
 
         private static CancellationToken stopMiningManager = CancellationToken.None;
@@ -90,6 +87,7 @@ namespace NHMCore.Mining
         #region Command Tasks
         public static Task StopAllMiners()
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.StopAllMiners, null);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -97,6 +95,7 @@ namespace NHMCore.Mining
 
         public static Task ChangeUsername(string username)
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.UsernameChanged, username);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -104,6 +103,7 @@ namespace NHMCore.Mining
 
         public static Task UpdateMiningSession(IEnumerable<ComputeDevice> devices)
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.DevicesStartStop, devices);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -111,6 +111,7 @@ namespace NHMCore.Mining
 
         private static Task NormalizedProfitsUpdate(Dictionary<AlgorithmType, double> normalizedProfits)
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.NormalizedProfitsUpdate, normalizedProfits);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -118,6 +119,7 @@ namespace NHMCore.Mining
 
         private static Task MiningLocationChanged(string miningLocation)
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.MiningLocationChanged, miningLocation);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -125,12 +127,14 @@ namespace NHMCore.Mining
 
         private static Task UseEthlargementChanged()
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.RunEthlargementChanged, null);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
         }
         private static Task MiningProfitSettingsChanged()
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.MiningProfitSettingsChanged, null);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -138,6 +142,7 @@ namespace NHMCore.Mining
 
         public static Task MinerRestartLoopNotify()
         {
+            if (RunninLoops == null) return Task.CompletedTask;
             var command = new Command(CommandType.MinerRestartLoopNotify, null);
             _commandQueue.Enqueue(command);
             return command.Tsc.Task;
@@ -234,6 +239,7 @@ namespace NHMCore.Mining
                         await CheckGroupingAndUpdateMiners(command.CommandType);
                         break;
                     case CommandResolutionType.RestartCurrentActiveMiners:
+                        // TODO this looks like a problem if no mining location is present
                         await RestartMiners();
                         break;
                     case CommandResolutionType.StopAllMiners:
@@ -266,9 +272,8 @@ namespace NHMCore.Mining
         {
             ApplicationStateManager.OnInternetCheck += OnInternetCheck;
 
-            _miningLocation = StratumService.Instance.SelectedServiceLocation;
-
-            StratumService.Instance.PropertyChanged += StratumServiceInstance_PropertyChanged;
+            _miningLocation = StratumService.Instance.SelectedOrFallbackServiceLocationCode().miningLocationCode;
+            StratumService.Instance.OnServiceLocationChanged += StratumServiceInstance_PropertyChanged;
 
             MiscSettings.Instance.PropertyChanged += MiscSettingsInstance_PropertyChanged;
             MiningProfitSettings.Instance.PropertyChanged += MiningProfitSettingsInstance_PropertyChanged;
@@ -288,16 +293,9 @@ namespace NHMCore.Mining
             return Task.WhenAll(loop1, loop2);
         }
 
-        private static void StratumServiceInstance_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private static void StratumServiceInstance_PropertyChanged(object sender, string miningLocation)
         {
-            if (e.PropertyName == nameof(StratumService.SelectedServiceLocation))
-            {
-                _ = MiningLocationChanged(StratumService.Instance.SelectedServiceLocation);
-            }
-            if (e.PropertyName == nameof(StratumService.SelectedFallbackServiceLocation))
-            {
-                _ = MiningLocationChanged(StratumService.Instance.SelectedFallbackServiceLocation);
-            }
+            _ = MiningLocationChanged(miningLocation);
         }
 
         private static void MiscSettingsInstance_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -350,7 +348,6 @@ namespace NHMCore.Mining
                 }
                 _runningMiners.Clear();
                 _miningDevices.Clear();
-                EthlargementIntegratedPlugin.Instance.Stop();
             }
         }
 
@@ -397,7 +394,7 @@ namespace NHMCore.Mining
                 Logger.Info(Tag, "Exiting MiningManagerMainLoop run cleanup");
                 // cleanup
                 PInvokeHelpers.AllowMonitorPowerdownAndSleep();
-            }            
+            }
         }
 
 
@@ -408,7 +405,6 @@ namespace NHMCore.Mining
 
         private static async Task StopAllMinersTask()
         {
-            EthlargementIntegratedPlugin.Instance.Stop();
             foreach (var groupMiner in _runningMiners.Values)
             {
                 await groupMiner.StopTask();
@@ -420,7 +416,6 @@ namespace NHMCore.Mining
         // PauseAllMiners doesn't clear _miningDevices
         private static async Task PauseAllMiners()
         {
-            EthlargementIntegratedPlugin.Instance.Stop();
             foreach (var groupMiner in _runningMiners.Values)
             {
                 await groupMiner.StopTask();
@@ -524,7 +519,8 @@ namespace NHMCore.Mining
         // full of state
         private static bool CheckIfProfitable(double currentProfit, bool log = true)
         {
-            if (MiningProfitSettings.Instance.MineRegardlessOfProfit) {
+            if (MiningProfitSettings.Instance.MineRegardlessOfProfit)
+            {
                 if (log) Logger.Info(Tag, $"Mine always regardless of profit");
                 return true;
             }
@@ -597,16 +593,13 @@ namespace NHMCore.Mining
             return (currentProfit, prevStateProfit);
         }
 
-        private static List<MiningPair> GetProfitableMiningPairs()
+        private static List<AlgorithmContainer> GetMostProfitableAlgorithmContainers()
         {
-            var profitableMiningPairs = new List<MiningPair>();
-            foreach (var device in _miningDevices)
-            {
-                // check if device has profitable algo
-                if (!device.HasProfitableAlgo()) continue;
-                profitableMiningPairs.Add(device.GetMostProfitablePair());
-            }
-            return profitableMiningPairs;
+            var profitableAlgorithmContainers = _miningDevices
+                .Where(device => device.HasProfitableAlgo())
+                .Select(device => device.GetMostProfitableAlgorithmContainer())
+                .ToList();
+            return profitableAlgorithmContainers;
         }
 
         private static async Task SwichMostProfitableGroupUpMethodTask(Dictionary<AlgorithmType, double> normalizedProfits, bool skipProfitsThreshold)
@@ -688,7 +681,7 @@ namespace NHMCore.Mining
 
             // grouping starting and stopping
             // group new miners 
-            var newGroupedMiningPairs = GroupingUtils.GetGroupedMiningPairs(GetProfitableMiningPairs());
+            var newGroupedMiningPairs = GroupingUtils.GetGroupedAlgorithmContainers(GetMostProfitableAlgorithmContainers());
             // check newGroupedMiningPairs and running Groups to figure out what to start/stop and keep running
             var currentRunningGroups = _runningMiners.Keys.ToArray();
             // check which groupMiners should be stopped and which ones should be started and which to keep running
@@ -703,7 +696,6 @@ namespace NHMCore.Mining
                 await stopGroup.StopTask();
             }
             // start new
-            var miningLocation = StratumService.Instance.SelectedServiceLocation;
             foreach (var startKey in toStartMinerGroupKeys)
             {
                 var miningPairs = newGroupedMiningPairs[startKey];
@@ -714,7 +706,7 @@ namespace NHMCore.Mining
                     continue;
                 }
                 _runningMiners[startKey] = toStart;
-                await toStart.StartMinerTask(stopMiningManager, miningLocation, _username);
+                await toStart.StartMinerTask(stopMiningManager, _miningLocation, _username);
             }
             // log scope
             {

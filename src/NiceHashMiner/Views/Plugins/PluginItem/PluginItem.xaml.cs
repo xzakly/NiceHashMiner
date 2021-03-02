@@ -2,21 +2,10 @@
 using NHMCore.Mining.Plugins;
 using NiceHashMiner.ViewModels.Plugins;
 using NiceHashMiner.Views.Common;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using static NHMCore.Translations;
 
 namespace NiceHashMiner.Views.Plugins.PluginItem
@@ -63,7 +52,7 @@ namespace NiceHashMiner.Views.Plugins.PluginItem
         private void ToggleDetailsButton_Click(object sender, RoutedEventArgs e)
         {
             if (DetailsToggleButton.IsChecked.Value)
-            {          
+            {
                 Expand();
             }
             else
@@ -82,40 +71,49 @@ namespace NiceHashMiner.Views.Plugins.PluginItem
                 _toggleButtonsGuard.Add(tButton);
                 PluginActionsButtonContext.IsOpen = true;
                 RoutedEventHandler closedHandler = null;
-                closedHandler += (s, e2) => {
+                closedHandler += (s, e2) =>
+                {
                     _toggleButtonsGuard.Remove(tButton);
                     tButton.IsChecked = false;
                     PluginActionsButtonContext.Closed -= closedHandler;
                 };
                 PluginActionsButtonContext.Closed += closedHandler;
             }
-            
+
         }
 
-        private void Button_Click_Install(object sender, RoutedEventArgs e)
+        private async void Button_Click_Install(object sender, RoutedEventArgs e)
         {
             if (_vm.Load.IsInstalling) return;
-            var dialog = new CustomDialog(400, 300)
+            if (AcceptedPlugins.IsAccepted(_vm.Plugin.PluginUUID))
             {
-                // Translate this???
-                Title = "Disclaimer on usage of 3rd party software",
-                Description = "NiceHash Miner integrates 3rd party mining software via the miner plugin system. However, since this is 3rd party software that is fully closed-source, we have no chance to inspect it in any way. NiceHash can not vouch for using that software and is refusing to take any responsibility for any damage caused, security breaches, loss of data or funds, system or hardware error, and other issues. By agreeing to this disclaimer you take full responsibility for using these closed-source miners as they are.",
-                OkText = Tr("I ACCEPT"),
-                CancelText = Tr("CANCEL"),
-                AnimationVisible = Visibility.Collapsed
-            };
-            dialog.OKClick += async (s, e1) =>
-            {
-                //AcceptedPlugins.Add(_vm.Plugin.PluginUUID);
                 await _vm.InstallOrUpdatePlugin();
-            };
-            CustomDialogManager.ShowModalDialog(dialog);
+            }
+            else
+            {
+                var dialog = new CustomDialog(400, 300)
+                {
+                    // Translate this???
+                    Title = "Disclaimer on usage of 3rd party software",
+                    Description = "NiceHash Miner integrates 3rd party mining software via the miner plugin system. However, since this is 3rd party software that is fully closed-source, we have no chance to inspect it in any way. NiceHash can not vouch for using that software and is refusing to take any responsibility for any damage caused, security breaches, loss of data or funds, system or hardware error, and other issues. By agreeing to this disclaimer you take full responsibility for using these closed-source miners as they are.",
+                    OkText = Tr("I ACCEPT"),
+                    CancelText = Tr("CANCEL"),
+                    AnimationVisible = Visibility.Collapsed
+                };
+                dialog.OKClick += async (s, e1) =>
+                {
+                    AcceptedPlugins.Add(_vm.Plugin.PluginUUID);
+                    await _vm.InstallOrUpdatePlugin();
+                };
+                CustomDialogManager.ShowModalDialog(dialog);
+            }
         }
 
-        private void Button_Click_Uninstall(object sender, RoutedEventArgs e)
+        private async void Button_Click_Uninstall(object sender, RoutedEventArgs e)
         {
+            AcceptedPlugins.Remove(_vm.Plugin.PluginUUID);
             PluginActionsButtonContext.IsOpen = false;
-            _vm.UninstallPlugin();
+            await _vm.UninstallPlugin();
         }
 
         private void Button_Click_ShowInternals(object sender, RoutedEventArgs e)

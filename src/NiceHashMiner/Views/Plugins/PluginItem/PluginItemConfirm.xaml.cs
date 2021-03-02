@@ -1,23 +1,9 @@
 ﻿using NHMCore;
 using NHMCore.Mining.Plugins;
-using NiceHashMiner.ViewModels.Plugins;
 using NiceHashMiner.Views.Common;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using static NHMCore.Translations;
 
 namespace NiceHashMiner.Views.Plugins.PluginItem
 {
@@ -26,7 +12,7 @@ namespace NiceHashMiner.Views.Plugins.PluginItem
     /// </summary>
     public partial class PluginItemConfirm : UserControl
     {
-        private PluginEntryVM _vm;
+        private PluginPackageInfoCR _vm;
         public PluginItemConfirm()
         {
             InitializeComponent();
@@ -40,11 +26,7 @@ namespace NiceHashMiner.Views.Plugins.PluginItem
 
         private void PluginEntry_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            _vm = e.NewValue as PluginEntryVM; // ?? throw new InvalidOperationException("DataContext must be of type `PluginEntryVM`");
-            if (!_vm?.Plugin?.Supported ?? false)
-            {
-                mainPluginGrid.ToolTip = "Not compatible with your hardware.";
-            }
+            _vm = e.NewValue as PluginPackageInfoCR; // ?? throw new InvalidOperationException("DataContext must be of type `PluginEntryVM`");
         }
 
         private void Collapse()
@@ -74,21 +56,19 @@ namespace NiceHashMiner.Views.Plugins.PluginItem
             DetailsToggleButtonText.Text = Translations.Tr(DetailsToggleButtonText.Text);
         }
 
-        private async void Button_Click_Install(object sender, RoutedEventArgs e)
+        private void Button_Click_Install(object sender, RoutedEventArgs e)
         {
-            if (_vm.Load.IsInstalling) return;
-            _vm.Plugin.IsUserActionRequired = false;
-            //AcceptedPlugins.Add(_vm.Plugin.PluginUUID);
+            _vm.IsUserActionRequired = false;
+            AcceptedPlugins.Add(_vm.PluginUUID);
             OnAcceptOrDecline?.Invoke(sender, e);
-            await _vm.ConfirmInstallOrUpdatePlugin();
         }
 
-        private void Button_Click_Remove(object sender, RoutedEventArgs e)
+        private async void Button_Click_Remove(object sender, RoutedEventArgs e)
         {
-            _vm.Plugin.IsUserActionRequired = false;
-            //AcceptedPlugins.Remove(_vm.Plugin.PluginUUID);
+            _vm.IsUserActionRequired = false;
+            AcceptedPlugins.Remove(_vm.PluginUUID);
+            await MinerPluginsManager.RemovePlugin(_vm.PluginUUID);
             OnAcceptOrDecline?.Invoke(sender, e);
-            _vm.UninstallPlugin();
         }
     }
 }

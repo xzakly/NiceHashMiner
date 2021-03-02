@@ -1,7 +1,5 @@
 ﻿using NHM.Common;
 using NHM.Common.Enums;
-using NiceHashMiner.ViewModels.Models;
-using NiceHashMiner.ViewModels.Plugins;
 using NHMCore;
 using NHMCore.ApplicationState;
 using NHMCore.Configs;
@@ -12,6 +10,8 @@ using NHMCore.Mining.Plugins;
 using NHMCore.Nhmws;
 using NHMCore.Notifications;
 using NHMCore.Switching;
+using NiceHashMiner.ViewModels.Models;
+using NiceHashMiner.ViewModels.Plugins;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -93,7 +93,7 @@ namespace NiceHashMiner.ViewModels
 
 
         public IReadOnlyList<string> ThemeOptions => _themeList;
-        private List<string> _themeList = new List<string>{ "Light", "Dark" };
+        private List<string> _themeList = new List<string> { "Light", "Dark" };
 
         #endregion settingsLists
 
@@ -167,35 +167,10 @@ namespace NiceHashMiner.ViewModels
                 _timeUnit = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PerTime));
-                OnPropertyChanged(nameof(CurrencyPerTime));
-                OnPropertyChanged(nameof(BtcPerTime));
-                OnPropertyChanged(nameof(MBtcPerTime));
-                OnPropertyChanged(nameof(ProfitPerTime));
             }
         }
 
         private string PerTime => Translations.Tr($" / {TimeUnit}");
-
-        // TODO get rif of duplicates
-        public string Currency
-        {
-            get => BalanceAndExchangeRates.SelectedFiatCurrency;
-            set
-            {
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(CurrencyPerTime));
-                OnPropertyChanged(nameof(ProfitPerTime));
-                OnPropertyChanged(nameof(ExchangeTooltip));
-            }
-        }
-
-        public string ExchangeTooltip => $"1 BTC = {BalanceAndExchangeRates.SelectedCurrBtcRate:F2} {Currency}";
-
-        public string CurrencyPerTime => $"{BalanceAndExchangeRates.SelectedFiatCurrency}{PerTime}";
-
-        public string BtcPerTime => $"BTC{PerTime}";
-
-        public string MBtcPerTime => $"m{BtcPerTime}";
 
         private string _scaledBtcPerTime;
         public string ScaledBtcPerTime
@@ -209,20 +184,6 @@ namespace NiceHashMiner.ViewModels
             }
         }
 
-        private string _scaledBtc = "BTC";
-        public string ScaledBtc
-        {
-            get => _scaledBtc;
-            set
-            {
-                if (_scaledBtc == value) return;
-                _scaledBtc = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string ProfitPerTime => $"Profit ({CurrencyPerTime})";
-
         public string GlobalRate
         {
             get
@@ -232,52 +193,19 @@ namespace NiceHashMiner.ViewModels
                 var scale = 1000;
                 if (GUISettings.Instance.AutoScaleBTCValues && sum < 100)
                 {
-                    ScaledBtcPerTime = MBtcPerTime;
+                    ScaledBtcPerTime = $"mBTC{PerTime}";
                     scale = 1;
                     var retScaled = $"{(sum / scale):F5}";
                     return retScaled;
                 }
-                ScaledBtcPerTime = BtcPerTime;
+                ScaledBtcPerTime = $"BTC{PerTime}";
                 var ret = $"{(sum / scale):F8}";
                 return ret;
             }
         }
 
-        public string GlobalRateFiat => $"≈ {(WorkingMiningDevs?.Sum(d => d.FiatPayrate) ?? 0):F2} {BalanceAndExchangeRates.SelectedFiatCurrency}";
+        public string GlobalRateFiat => $"≈ {(WorkingMiningDevs?.Sum(d => d.FiatPayrate) ?? 0):F2} {BalanceAndExchangeRates.SelectedFiatCurrency}{PerTime}";
 
-        private double _btcBalance;
-        private double BtcBalance
-        {
-            get => _btcBalance;
-            set
-            {
-                _btcBalance = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(FiatBalance));
-                OnPropertyChanged(nameof(ScaledBtcBalance));
-            }
-        }
-
-        public double ScaledBtcBalance
-        {
-            get
-            {
-                var scale = 1;
-                if (GUISettings.Instance.AutoScaleBTCValues && _btcBalance < 0.1)
-                {
-                    scale = 1000;
-                    ScaledBtc = "mBTC";
-                }
-                else
-                {
-                    ScaledBtc = "BTC";
-                }
-
-                return _btcBalance * scale;
-            }
-        }
-
-        public double FiatBalance => BalanceAndExchangeRates.Instance.ConvertFromBtc(BtcBalance);
 
         #endregion
 
@@ -297,7 +225,7 @@ namespace NiceHashMiner.ViewModels
         {
             lock (_lock)
             {
-                if (Plugins == null) return; 
+                if (Plugins == null) return;
                 var rankedPlugins = MinerPluginsManagerState.Instance.RankedPlugins;
                 var rankedPluginsArray = rankedPlugins.ToArray();
                 // add new
@@ -319,7 +247,7 @@ namespace NiceHashMiner.ViewModels
                 var pluginsToSort = Plugins.ToList();
                 for (int i = 0; i < sorted.Count; i++)
                 {
-                    var oldIndex = pluginsToSort.FindIndex(p => p.Plugin == sorted[i]); 
+                    var oldIndex = pluginsToSort.FindIndex(p => p.Plugin == sorted[i]);
                     Plugins.Move(oldIndex, i);
                 }
             }
@@ -338,23 +266,6 @@ namespace NiceHashMiner.ViewModels
         {
             _updateTimer = new Timer(1000);
             _updateTimer.Elapsed += UpdateTimerOnElapsed;
-
-            BalanceAndExchangeRates.OnExchangeUpdate += (_, __) =>
-            {
-                OnPropertyChanged(nameof(ExchangeTooltip));
-            };
-            BalanceAndExchangeRates.Instance.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(BalanceAndExchangeRates.BtcBalance))
-                {
-                    BtcBalance = BalanceAndExchangeRates.Instance.BtcBalance ?? 0;
-                }
-                if (e.PropertyName == nameof(BalanceAndExchangeRates.SelectedFiatCurrency))
-                {
-                    Currency = BalanceAndExchangeRates.Instance.SelectedFiatCurrency;
-                    OnPropertyChanged(nameof(FiatBalance));
-                }
-            };
 
             VersionState.Instance.PropertyChanged += (_, e) =>
             {
@@ -394,7 +305,7 @@ namespace NiceHashMiner.ViewModels
             HelpNotificationList = new ObservableCollection<Notification>();
             await ApplicationStateManager.InitializeManagersAndMiners(sl);
 
-            Devices = new ObservableCollection<DeviceData>(AvailableDevices.Devices.Select(d => (DeviceData) d));
+            Devices = new ObservableCollection<DeviceData>(AvailableDevices.Devices.Select(d => (DeviceData)d));
             DevicesTDP = new ObservableCollection<DeviceDataTDP>(AvailableDevices.Devices.Select(d => new DeviceDataTDP(d)));
             MiningDevs = new ObservableCollection<IMiningData>(AvailableDevices.Devices.Select(d => new MiningData(d)));
 
@@ -476,18 +387,11 @@ namespace NiceHashMiner.ViewModels
         {
             if (!await NHSmaData.WaitOnDataAsync(10)) return;
             await ApplicationStateManager.StartAllAvailableDevicesTask();
-
-
-            ////test delete after
-            //NotificationsManager.Instance.AddNotificationToList(new Notification("start mining", "device started mining"));
         }
 
         public async Task StopMining()
         {
             await ApplicationStateManager.StopAllDevicesTask();
-
-            ////test delete after
-            //NotificationsManager.Instance.AddNotificationToList(new Notification("stop mining", "device stopped mining"));
         }
     }
 }

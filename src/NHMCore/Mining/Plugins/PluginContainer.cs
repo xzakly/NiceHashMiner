@@ -1,19 +1,16 @@
-﻿using NHM.MinerPlugin;
-using NHM.MinerPluginToolkitV1.ExtraLaunchParameters;
-using NHM.MinerPluginToolkitV1.Interfaces;
-using NHM.Common;
+﻿using NHM.Common;
 using NHM.Common.Algorithm;
 using NHM.Common.Device;
 using NHM.Common.Enums;
+using NHM.MinerPlugin;
+using NHM.MinerPluginToolkitV1.ExtraLaunchParameters;
+using NHM.MinerPluginToolkitV1.Interfaces;
 using NHMCore.Switching;
-using NHMCore.Utils;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using NHMCore.Configs;
 
 namespace NHMCore.Mining.Plugins
 {
@@ -71,7 +68,7 @@ namespace NHMCore.Mining.Plugins
             }
         }
 
-        public static PluginContainer Create(IMinerPlugin plugin)
+        internal static PluginContainer Create(IMinerPlugin plugin)
         {
             var newPlugin = new PluginContainer(plugin);
             AddPluginContainer(newPlugin);
@@ -123,11 +120,10 @@ namespace NHMCore.Mining.Plugins
         public bool IsBroken { get; private set; } = false;
         public bool IsCompatible { get; private set; } = false;
         public bool IsInitialized { get; private set; } = false;
-        public bool IsVersionMismatch { get; private set; } = false;
         // algos from and for the plugin
-        public Dictionary<BaseDevice, IReadOnlyList<Algorithm>> _cachedAlgorithms { get; } = new Dictionary<BaseDevice, IReadOnlyList<Algorithm>>();
+        private Dictionary<BaseDevice, IReadOnlyList<Algorithm>> _cachedAlgorithms { get; } = new Dictionary<BaseDevice, IReadOnlyList<Algorithm>>();
         // algos for NiceHashMiner Client
-        public Dictionary<string, List<AlgorithmContainer>> _cachedNiceHashMinerAlgorithms { get; } = new Dictionary<string, List<AlgorithmContainer>>();
+        private Dictionary<string, List<AlgorithmContainer>> _cachedNiceHashMinerAlgorithms { get; } = new Dictionary<string, List<AlgorithmContainer>>();
 
         public bool InitPluginContainer()
         {
@@ -188,8 +184,11 @@ namespace NHMCore.Mining.Plugins
                     _cachedNiceHashMinerAlgorithms[deviceUUID] = algos;
                 }
 
-                //check for version mismatch
-                CheckVersionMismatch();
+                // Ethlargement extra check
+                if (_plugin == EthlargementIntegratedPlugin.Instance)
+                {
+                    IsCompatible = EthlargementIntegratedPlugin.Instance.SystemContainsSupportedDevices;
+                }
             }
             catch (Exception e)
             {
@@ -202,42 +201,12 @@ namespace NHMCore.Mining.Plugins
             return true;
         }
 
-        private void CheckVersionMismatch()
-        {
-            try
-            {
-                var versionFilePath = Paths.MinerPluginsPath(PluginUUID, "version.txt");
-                if (File.Exists(versionFilePath))
-                {
-                    var versionString = File.ReadAllText(versionFilePath);
-                    Version.TryParse(versionString, out var fileVersion);
-                    if (Version != fileVersion)
-                    {
-                        IsVersionMismatch = true;
-
-                        File.Delete(versionFilePath);
-                    }
-                }
-                else
-                {
-                    if (!Directory.Exists(Paths.MinerPluginsPath(PluginUUID)))
-                    {
-                        Directory.CreateDirectory(Paths.MinerPluginsPath(PluginUUID));
-                    }
-                    File.WriteAllText(versionFilePath, Version.ToString());
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(LogTag, $"Version mismatch check error: {e.Message}");
-            }
-        }
-
         private bool _initInternalsCalled = false;
         public void AddAlgorithmsToDevices()
         {
             var payingRates = NHSmaData.CurrentPayingRatesSnapshot();
-            CheckExec(nameof(AddAlgorithmsToDevices), () => {
+            CheckExec(nameof(AddAlgorithmsToDevices), () =>
+            {
                 if (!_initInternalsCalled && _plugin is IInitInternals impl)
                 {
                     _initInternalsCalled = true;
@@ -297,6 +266,11 @@ namespace NHMCore.Mining.Plugins
 
         public string PluginUUID { get; private set; }
 
+        public bool CanGroupAlgorithmContainer(AlgorithmContainer a, AlgorithmContainer b)
+        {
+            return CanGroup(a.ToMiningPair(), b.ToMiningPair());
+        }
+
         public bool CanGroup(MiningPair a, MiningPair b)
         {
             return CheckExec(nameof(CanGroup), () => _plugin.CanGroup(a, b), false);
@@ -307,15 +281,16 @@ namespace NHMCore.Mining.Plugins
             return CheckExec(nameof(CreateMiner), () => _plugin.CreateMiner(), null);
         }
 
-        // GetSupportedAlgorithms is part of the Init
-        public Dictionary<BaseDevice, IReadOnlyList<Algorithm>> GetSupportedAlgorithms(IEnumerable<BaseDevice> devices)
-        {
-            return CheckExec(nameof(GetSupportedAlgorithms), () => _plugin.GetSupportedAlgorithms(devices), null);
-        }
+
         #endregion IMinerPlugin
 
+        public bool HasMisingBinaryPackageFiles()
+        {
+            return CheckBinaryPackageMissingFiles().Any();
+        }
+
         #region IBinaryPackageMissingFilesChecker
-        public IEnumerable<string> CheckBinaryPackageMissingFiles()
+        private IEnumerable<string> CheckBinaryPackageMissingFiles()
         {
             var defaultRet = Enumerable.Empty<string>();
             if (_plugin is IBinaryPackageMissingFilesChecker impl)
@@ -327,6 +302,13 @@ namespace NHMCore.Mining.Plugins
         #endregion IBinaryPackageMissingFilesChecker
 
         #region IDevicesCrossReference
+
+        public bool HasDevicesCrossReference()
+        {
+            return _plugin is IDevicesCrossReference;
+        }
+
+#warning Check this with NVIDIA and AMD driver recovery 
         private bool _devicesCrossReference = false;
         public Task DevicesCrossReference(IEnumerable<BaseDevice> devices)
         {
@@ -395,7 +377,8 @@ namespace NHMCore.Mining.Plugins
                 Type typecontroller = typeof(NHM.MinerPluginToolkitV1.PluginBase);
                 var propInfo = typecontroller.GetProperty("MinerOptionsPackage", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.GetProperty);
                 var propInfo2 = typecontroller.GetProperty("MinerOptionsPackage");
-                if (propInfo != null) {
+                if (propInfo != null)
+                {
                     var ret = (MinerOptionsPackage)propInfo.GetValue(this._plugin);
                     return ret;
                 }
@@ -432,7 +415,8 @@ namespace NHMCore.Mining.Plugins
         private void CheckExec(string functionName, Action function)
         {
             // fake return
-            CheckExec(functionName, () => {
+            CheckExec(functionName, () =>
+            {
                 function();
                 return "success";
             }, "fail");

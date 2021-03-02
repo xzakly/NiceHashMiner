@@ -2,6 +2,7 @@
 using NHMCore;
 using NHMCore.ApplicationState;
 using NHMCore.Configs;
+using NHMCore.Mining.Plugins;
 using NHMCore.Notifications;
 using NHMCore.Utils;
 using NiceHashMiner.ViewModels;
@@ -9,6 +10,7 @@ using NiceHashMiner.Views.Common;
 using NiceHashMiner.Views.Common.NHBase;
 using NiceHashMiner.Views.TDPSettings;
 using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -28,10 +30,12 @@ namespace NiceHashMiner.Views
         private bool _miningStoppedOnClose;
         private Timer _timer = new Timer();
 
-        public MainWindow()
+        public readonly bool? LoginSuccess = null;
+
+        public MainWindow(bool? loginSuccess)
         {
             InitializeComponent();
-
+            LoginSuccess = loginSuccess;
             _vm = this.AssertViewModel<MainVM>();
             Title = ApplicationStateManager.Title;
 
@@ -70,6 +74,7 @@ namespace NiceHashMiner.Views
         #region Start-Loaded/Closing
         private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
+            SetBuildTag();
             ThemeSetterManager.SetThemeSelectedThemes();
             UpdateHelpers.OnAutoUpdate = () =>
             {
@@ -79,7 +84,6 @@ namespace NiceHashMiner.Views
                     {
                         Title = Translations.Tr("NiceHash Miner Starting Update"),
                         Description = Translations.Tr("NiceHash Miner auto updater in progress."),
-                        OkText = Translations.Tr("OK"),
                         CancelVisible = Visibility.Collapsed,
                         OkVisible = Visibility.Collapsed,
                         AnimationVisible = Visibility.Visible,
@@ -126,7 +130,7 @@ namespace NiceHashMiner.Views
 
         private void Instance_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if(nameof(NotificationsManager.NotificationNewCount) == e.PropertyName)
+            if (nameof(NotificationsManager.NotificationNewCount) == e.PropertyName)
             {
                 Dispatcher.Invoke(() =>
                 {
@@ -149,7 +153,8 @@ namespace NiceHashMiner.Views
                         CancelVisible = Visibility.Collapsed,
                         AnimationVisible = Visibility.Collapsed
                     };
-                    nhmBurnDialog.OnExit += (s,e) => {
+                    nhmBurnDialog.OnExit += (s, e) =>
+                    {
                         ApplicationStateManager.ExecuteApplicationExit();
                     };
                     ShowContentAsModalDialog(nhmBurnDialog);
@@ -171,10 +176,12 @@ namespace NiceHashMiner.Views
                         CancelText = Translations.Tr("Cancel"),
                         AnimationVisible = Visibility.Collapsed
                     };
-                    nhmNoDeviceDialog.OKClick += (s, e) => {
+                    nhmNoDeviceDialog.OKClick += (s, e) =>
+                    {
                         Process.Start(Links.NhmNoDevHelp);
                     };
-                    nhmNoDeviceDialog.OnExit += (s, e) => {
+                    nhmNoDeviceDialog.OnExit += (s, e) =>
+                    {
                         ApplicationStateManager.ExecuteApplicationExit();
                     };
                     ShowContentAsModalDialog(nhmNoDeviceDialog);
@@ -201,12 +208,33 @@ namespace NiceHashMiner.Views
                     tdpWindow.DataContext = _vm;
                     tdpWindow.Show();
                 }
-                
-                if (_vm.Plugins.Any(p => p.Plugin.IsUserActionRequired))
+
+                if (MinerPluginsManager.EulaConfirm.Any())
                 {
                     var pluginsPopup = new Plugins.PluginsConfirmDialog();
-                    pluginsPopup.DataContext = _vm;
+                    pluginsPopup.DataContext = new Plugins.PluginsConfirmDialog.VM
+                    {
+                        Plugins = new ObservableCollection<PluginPackageInfoCR>(MinerPluginsManager.EulaConfirm)
+                    };
                     ShowContentAsModalDialog(pluginsPopup);
+                }
+
+                if (LoginSuccess.HasValue)
+                {
+                    var description = LoginSuccess.Value ? Translations.Tr("Login performed successfully.") : Translations.Tr("Unable to retreive BTC address. Please retreive it by yourself from web page.");
+                    var btcLoginDialog = new CustomDialog()
+                    {
+                        Title = Translations.Tr("Login"),
+                        OkText = Translations.Tr("Ok"),
+                        CancelVisible = Visibility.Collapsed,
+                        AnimationVisible = Visibility.Collapsed,
+                        Description = description
+                    };
+                    btcLoginDialog.OKClick += (s, e) =>
+                    {
+                        if (!LoginSuccess.Value) Process.Start(Links.Login);
+                    };
+                    CustomDialogManager.ShowModalDialog(btcLoginDialog);
                 }
 
                 if (Launcher.IsUpdated)
@@ -333,7 +361,7 @@ namespace NiceHashMiner.Views
                             CancelVisible = Visibility.Collapsed,
                             OkVisible = Visibility.Collapsed,
                             AnimationVisible = Visibility.Collapsed,
-                           
+
                         };
                         CustomDialogManager.ShowModalDialog(dialog);
                     });
@@ -347,7 +375,7 @@ namespace NiceHashMiner.Views
                     Logger.Error("MainVM.IsNHMWSConnected", ex.Message);
                 }
             }
-            else if(_vm.NHMWSConnected && nhmwsDialogShown)
+            else if (_vm.NHMWSConnected && nhmwsDialogShown)
             {
                 try
                 {

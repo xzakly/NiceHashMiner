@@ -1,8 +1,8 @@
-﻿using NHM.MinerPluginToolkitV1;
-using NHM.MinerPluginToolkitV1.Configs;
-using NHM.Common.Algorithm;
+﻿using NHM.Common.Algorithm;
 using NHM.Common.Device;
 using NHM.Common.Enums;
+using NHM.MinerPluginToolkitV1;
+using NHM.MinerPluginToolkitV1.Configs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,11 +23,11 @@ namespace TRex
             // https://github.com/trexminer/T-Rex/releases 
             MinersBinsUrlsSettings = new MinersBinsUrlsSettings
             {
-                BinVersion = "0.19.9",
+                BinVersion = "0.19.11",
                 ExePath = new List<string> { "t-rex.exe" },
                 Urls = new List<string>
                 {
-                    "https://github.com/trexminer/T-Rex/releases/download/0.19.9/t-rex-0.19.9-win-cuda11.1.zip", // original
+                    "https://github.com/trexminer/T-Rex/releases/download/0.19.11/t-rex-0.19.11-win-cuda11.1.zip", // original
                 }
             };
             PluginMetaInfo = new PluginMetaInfo
@@ -39,7 +39,7 @@ namespace TRex
 
         public override string PluginUUID => "03f80500-94ec-11ea-a64d-17be303ea466";
 
-        public override Version Version => new Version(15, 9);
+        public override Version Version => new Version(15, 11);
 
         public override string Name => "TRex";
 
@@ -64,7 +64,7 @@ namespace TRex
         protected override MinerBase CreateMinerBase()
         {
             return new TRex(PluginUUID);
-        }        
+        }
 
         public override IEnumerable<string> CheckBinaryPackageMissingFiles()
         {
@@ -79,7 +79,7 @@ namespace TRex
                 if (ids.Count() == 0) return false;
                 if (benchmarkedPluginVersion.Major == 15 && benchmarkedPluginVersion.Minor < 4 && ids.FirstOrDefault() == AlgorithmType.Octopus) return true;
             }
-            catch {}
+            catch { }
             return false;
         }
     }

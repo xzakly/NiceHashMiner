@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NHMCore.Notifications
 {
@@ -13,6 +9,7 @@ namespace NHMCore.Notifications
         Profit,
         MonitoringNvidiaElevate,
         EthlargementElevate,
+        EthlargementNotEnabled,
         ConnectionLost,
         NoEnabledDevice,
         DemoMining,
@@ -44,6 +41,9 @@ namespace NHMCore.Notifications
         VirtualMemory,
         OpenClFallback,
         NoAvailableAlgorithms,
-        LogArchiveUpload
+        LogArchiveUpload,
+        MissingGPUs,
+        NVMLInitFail,
+        NVMLLoadFail
     }
 }

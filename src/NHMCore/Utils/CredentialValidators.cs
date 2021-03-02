@@ -11,7 +11,7 @@ namespace NHMCore.Utils
         public const int MAX_BTC_LENGTH = 35;
         public static bool ValidateBitcoinAddress(string address)
         {
-            if (BuildOptions.BUILD_TAG != BuildTag.PRODUCTION) return true;
+            if (BuildOptions.BUILD_TAG != BuildTag.PRODUCTION) return !string.IsNullOrEmpty(address) && !string.IsNullOrWhiteSpace(address);
             // production
             try
             {
@@ -52,7 +52,7 @@ namespace NHMCore.Utils
                 while (--j >= 0)
                 {
                     p += 58 * output[j];
-                    output[j] = (byte) (p % 256);
+                    output[j] = (byte)(p % 256);
                     p /= 256;
                 }
                 if (p != 0) throw new Exception("Address too long.");

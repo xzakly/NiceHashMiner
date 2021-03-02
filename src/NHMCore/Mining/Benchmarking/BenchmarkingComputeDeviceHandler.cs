@@ -14,7 +14,7 @@ namespace NHMCore.Mining.Benchmarking
     class BenchmarkingComputeDeviceHandler
     {
         #region STATIC
-        
+
         private static ConcurrentDictionary<ComputeDevice, BenchmarkingComputeDeviceHandler> BenchmarkingHandlers { get; set; } = new ConcurrentDictionary<ComputeDevice, BenchmarkingComputeDeviceHandler>();
 
         internal static void BenchmarkDeviceAlgorithms(ComputeDevice computeDevice, IEnumerable<AlgorithmContainer> algorithmContainers, BenchmarkPerformanceType performance, bool startMiningAfterBenchmark = false)
@@ -85,10 +85,11 @@ namespace NHMCore.Mining.Benchmarking
         public BenchmarkPerformanceType PerformanceType { get; set; } = BenchmarkPerformanceType.Standard;
         private readonly List<string> _benchmarkFailedAlgo = new List<string>();
 
-        private BenchmarkingComputeDeviceHandler(ComputeDevice device) {
+        private BenchmarkingComputeDeviceHandler(ComputeDevice device)
+        {
             Device = device;
         }
-        
+
 
         // APPEND, REMOVE, UPDATE (on plugin updates)
         internal bool AppendForBenchmarking(IEnumerable<AlgorithmContainer> algorithmContainers)
@@ -178,15 +179,17 @@ namespace NHMCore.Mining.Benchmarking
 
         public void StopBenchmark()
         {
-            try {
+            try
+            {
                 _stopBenchmark?.Cancel();
             }
-            catch { }            
+            catch { }
         }
 
         private void StopCurrentAlgorithmBenchmark()
         {
-            try {
+            try
+            {
                 _stopCurrentAlgorithmBenchmark?.Cancel();
             }
             catch { }
@@ -230,6 +233,10 @@ namespace NHMCore.Mining.Benchmarking
 
         private async Task BenchmarkAlgorithm(AlgorithmContainer algo, CancellationToken stop)
         {
+            var miningLocation = StratumService.Instance.SelectedOrFallbackServiceLocationCode().miningLocationCode;
+            // TODO hidden issue here if our market is not available we will not be able to execute benchmarks
+            // unable to benchmark service locations are not operational
+            if (miningLocation == null) return; 
             using (var powerHelper = new PowerHelper(algo.ComputeDevice))
             {
                 var plugin = algo.PluginContainer;
@@ -244,13 +251,13 @@ namespace NHMCore.Mining.Benchmarking
                 EthlargementIntegratedPlugin.Instance.Start(miningPairs);
                 miner.InitMiningPairs(miningPairs);
                 // fill service since the benchmark might be online. DemoUser.BTC must be used
-                miner.InitMiningLocationAndUsername(StratumService.Instance.SelectedServiceLocation, DemoUser.BTC);
+                miner.InitMiningLocationAndUsername(miningLocation, DemoUser.BTC);
                 powerHelper.Start();
                 algo.ComputeDevice.State = DeviceState.Benchmarking;
                 var result = await miner.StartBenchmark(stop, PerformanceType);
                 if (stop.IsCancellationRequested) return;
 
-                algo.IsReBenchmark = false; 
+                algo.IsReBenchmark = false;
                 //EthlargementIntegratedPlugin.Instance.Stop(miningPairs); // TODO check stopping
                 var power = powerHelper.Stop();
                 if (result.Success || result.AlgorithmTypeSpeeds?.Count > 0)
@@ -259,8 +266,6 @@ namespace NHMCore.Mining.Benchmarking
                     var speeds = result.AlgorithmTypeSpeeds.Select(ats => ats.speed).ToList();
                     algo.Speeds = speeds;
                     algo.PowerUsage = power;
-                    // set status to empty string it will return speed
-                    BenchmarkManager.SetCurrentStatus(algo.ComputeDevice, algo, "");
                     ConfigManager.CommitBenchmarksForDevice(algo.ComputeDevice);
                 }
                 else
@@ -270,7 +275,6 @@ namespace NHMCore.Mining.Benchmarking
                     // add new failed list
                     _benchmarkFailedAlgo.Add(algo.AlgorithmName);
                     algo.SetBenchmarkError(result.ErrorMessage);
-                    BenchmarkManager.SetCurrentStatus(algo.ComputeDevice, algo, result.ErrorMessage);
                 }
             }
         }

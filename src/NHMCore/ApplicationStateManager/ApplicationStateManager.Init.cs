@@ -72,7 +72,8 @@ namespace NHMCore
                             return Tr("Checking Windows Video Controllers");
                     }
                 };
-                var devDetectionProgress = new Progress<DeviceDetectionStep>(step => {
+                var devDetectionProgress = new Progress<DeviceDetectionStep>(step =>
+                {
                     var msg = detectionStepMessage(step);
                     loader.PrimaryProgress?.Report((msg, nextProgPerc()));
                 });
@@ -81,9 +82,9 @@ namespace NHMCore
                 {
                     AvailableNotifications.CreateOpenClFallbackInfo();
                 }
-                if (MiscSettings.Instance.UseEthlargement && !Helpers.IsElevated)
+                if (DeviceDetection.DetectionResult.IsDCHDriver)
                 {
-                    AvailableNotifications.CreateEthlargementElevateInfo();
+                    AvailableNotifications.CreateWarningNVIDIADCHInfo();
                 }
 
                 // add devices
@@ -117,6 +118,14 @@ namespace NHMCore
                 if (!ramCheckOK)
                 {
                     AvailableNotifications.CreateIncreaseVirtualMemoryInfo();
+                }
+                if (AvailableDevices.HasNvidia && DeviceDetection.DetectionResult.IsNvidiaNVMLInitializedError)
+                {
+                    AvailableNotifications.CreateFailedNVMLInitInfo();
+                }
+                if (AvailableDevices.HasNvidia && DeviceDetection.DetectionResult.IsNvidiaNVMLLoadedError)
+                {
+                    AvailableNotifications.CreateFailedNVMLLoadInfo();
                 }
                 // no compatible devices? exit
                 if (AvailableDevices.Devices.Count == 0)
@@ -155,12 +164,6 @@ namespace NHMCore
                 }
 
                 #endregion Device Detection
-
-                // TODO ADD STEP AND MESSAGE
-                EthlargementIntegratedPlugin.Instance.InitAndCheckSupportedDevices(AvailableDevices.Devices.Select(dev => dev.BaseDevice));
-                //await MinerPluginsManager.CleanupPlugins();
-                MinerPluginsManager.CheckAndDeleteUnsupportedPlugins();
-
                 // STEP
                 // load plugins
                 loader.PrimaryProgress?.Report((Tr("Loading miner plugins..."), nextProgPerc()));
@@ -180,7 +183,7 @@ namespace NHMCore
                 var (btc, worker, group) = CredentialsSettings.Instance.GetCredentials();
                 NHWebSocket.SetCredentials(btc, worker, group);
                 NHWebSocket.StartLoop(NHM.Common.Nhmws.NhmSocketAddress, ExitApplication.Token);
-                
+
 
                 // STEP
                 // disable windows error reporting
@@ -196,33 +199,21 @@ namespace NHMCore
                 }
 
                 // STEP
-                // Downloading integrated plugins bins, TODO put this in some internals settings
-                var hasMissingMinerBins = MinerPluginsManager.GetMissingMiners().Count > 0;
-                if (hasMissingMinerBins)
-                {
-                    loader.SecondaryTitle = Tr("Downloading Miner Binaries");
-                    loader.SecondaryVisible = true;
-
-                    loader.PrimaryProgress?.Report((Tr("Downloading Miner Binaries..."), nextProgPerc()));
-                    await MinerPluginsManager.DownloadMissingMinersBins(loader.SecondaryProgress, ExitApplication.Token);
-                    //await MinersDownloader.MinersDownloadManager.DownloadAndExtractOpenSourceMinersWithMyDownloaderAsync(progressDownload, ExitApplication.Token);
-                    loader.SecondaryVisible = false;
-                    if (ExitApplication.IsCancellationRequested) return;
-                }
+                // Update miner plugin binaries
+                loader.SecondaryTitle = Tr("Updating Miner Binaries");
+                loader.SecondaryVisible = true;
+                loader.PrimaryProgress?.Report((Tr("Updating Miner Binaries..."), nextProgPerc()));
+                await MinerPluginsManager.UpdateMinersBins(loader.SecondaryProgress, ExitApplication.Token);
+                loader.SecondaryVisible = false;
+                if (ExitApplication.IsCancellationRequested) return;
 
                 // STEP
-                // Update miner plugin binaries
-                var hasPluginMinerUpdate = MinerPluginsManager.HasMinerUpdates();
-                if (hasPluginMinerUpdate)
-                {
-                    loader.SecondaryTitle = Tr("Updating Miner Binaries");
-                    loader.SecondaryVisible = true;
-
-                    loader.PrimaryProgress?.Report((Tr("Updating Miner Binaries..."), nextProgPerc()));
-                    await MinerPluginsManager.UpdateMinersBins(loader.SecondaryProgress, ExitApplication.Token);
-                    loader.SecondaryVisible = false;
-                    if (ExitApplication.IsCancellationRequested) return;
-                }
+                loader.SecondaryTitle = Tr("Downloading Miner Binaries");
+                loader.SecondaryVisible = true;
+                loader.PrimaryProgress?.Report((Tr("Downloading Miner Binaries..."), nextProgPerc()));
+                await MinerPluginsManager.DownloadMissingMinersBins(loader.SecondaryProgress, ExitApplication.Token);
+                loader.SecondaryVisible = false;
+                if (ExitApplication.IsCancellationRequested) return;
 
                 //var shouldAutoIncreaseVRAM = Registry.CurrentUser.GetValue(@"Software\" + APP_GUID.GUID + @"\AutoIncreaseVRAM", false);
                 //if (shouldAutoIncreaseVRAM == null)
@@ -237,11 +228,24 @@ namespace NHMCore
                 //}
 
                 // re-check after download we should have all miner files
-                var missingMinerBins = MinerPluginsManager.GetMissingMiners().Count > 0;
-                if (missingMinerBins)
+                if (MinerPluginsManager.HasMissingMiners())
                 {
                     AvailableNotifications.CreateMissingMinersInfo();
                 }
+
+                // show notification if EthPill could be running and it is not
+                if (EthlargementIntegratedPlugin.Instance.SystemContainsSupportedDevicesNotSystemElevated)
+                {
+                    if (MiscSettings.Instance.UseEthlargement)
+                    {
+                        AvailableNotifications.CreateEthlargementElevateInfo();
+                    }
+                    else
+                    {
+                        AvailableNotifications.CreateEthlargementNotEnabledInfo();
+                    }
+                }
+
                 // fire up mining manager loop
                 var username = CredentialValidators.ValidateBitcoinAddress(btc) ? CreateUsername(btc, RigID()) : DemoUser.BTC;
                 MiningManager.StartLoops(ExitApplication.Token, username);

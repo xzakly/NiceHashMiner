@@ -1,5 +1,4 @@
-﻿using NHM.MinerPlugin;
-using NHM.Common.Enums;
+﻿using NHM.Common.Enums;
 using NHMCore.Notifications;
 using System;
 using System.Collections.Generic;
@@ -74,14 +73,9 @@ namespace NHMCore.Mining.Grouping
             }
         }
 
-        public MiningPair GetMostProfitablePair()
+        public AlgorithmContainer GetMostProfitableAlgorithmContainer()
         {
-            var pAlgo = Algorithms[GetMostProfitableIndex()];
-            return new MiningPair
-            {
-                Device = Device.BaseDevice,
-                Algorithm = pAlgo.Algorithm
-            };
+            return Algorithms[GetMostProfitableIndex()];
         }
 
         public bool HasProfitableAlgo()

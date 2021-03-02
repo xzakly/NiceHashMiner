@@ -1,6 +1,7 @@
 ﻿using NHM.Common;
 using NHM.Common.Algorithm;
 using NHM.Common.Enums;
+using NHM.MinerPlugin;
 using NHMCore.ApplicationState;
 using NHMCore.Configs;
 using NHMCore.Mining.Plugins;
@@ -13,7 +14,7 @@ namespace NHMCore.Mining
     public class AlgorithmContainer : NotifyChangedBase
     {
         public Algorithm Algorithm { get; private set; }
-        
+
         public PluginContainer PluginContainer { get; private set; }
 
         public ComputeDevice ComputeDevice { get; private set; }
@@ -48,8 +49,8 @@ namespace NHMCore.Mining
                 if (Speeds.Sum() == 0) return AlgorithmStatus.NoBenchmark;
                 if (IsReBenchmark) return AlgorithmStatus.ReBenchmark;
 
-                if (0  >= CurrentEstimatedProfit) return AlgorithmStatus.Unprofitable;
-                
+                if (0 >= CurrentEstimatedProfit) return AlgorithmStatus.Unprofitable;
+
                 return AlgorithmStatus.Benchmarked;
             }
         }
@@ -72,6 +73,15 @@ namespace NHMCore.Mining
                 IsUserEditable = !miningOrBenchmarking;
                 OnPropertyChanged(nameof(IsUserEditable));
             }
+        }
+
+        public MiningPair ToMiningPair()
+        {
+            return new MiningPair
+            {
+                Device = ComputeDevice.BaseDevice,
+                Algorithm = Algorithm
+            };
         }
 
         public bool IsUserEditable { get; private set; } = true;
@@ -281,7 +291,7 @@ namespace NHMCore.Mining
                 }
 
                 if (!_updateEstimatedProfitCalled) return -2;
-                
+
                 if (EstimatedProfitAllSMAPresent && EstimatedProfitAllSMAPositiveOrZero)
                 {
                     var newProfit = 0d;
@@ -294,12 +304,12 @@ namespace NHMCore.Mining
                     return Math.Round(newProfit, 8);
                 }
                 // we can't calculate 
-                return  -1;
+                return -1;
             }
         }
         public string CurrentEstimatedProfitStr
         {
-            
+
             get
             {
                 var currentEstimatedProfit = CurrentEstimatedProfit;
@@ -353,7 +363,7 @@ namespace NHMCore.Mining
         /// </summary>
         public virtual double PowerUsage { get; set; }
 
-#endregion
+        #endregion
 
         private bool _isReBenchmark = false;
         public bool IsReBenchmark
@@ -379,7 +389,7 @@ namespace NHMCore.Mining
             }
         }
 
-        
+
 
         #region Benchmark info
 
@@ -428,9 +438,9 @@ namespace NHMCore.Mining
             this.Speeds = allZero;
         }
 
-#endregion
+        #endregion
 
-#region Benchmark methods
+        #region Benchmark methods
 
         public void SetBenchmarkPending()
         {
@@ -448,9 +458,9 @@ namespace NHMCore.Mining
             BenchmarkErrorMessage = message;
         }
 
-#endregion
+        #endregion
 
-#region Profitability methods
+        #region Profitability methods
 
         public virtual void UpdateCurrentNormalizedProfit(Dictionary<AlgorithmType, double> profits)
         {
@@ -458,7 +468,8 @@ namespace NHMCore.Mining
             for (int i = 0; i < IDs.Length; i++)
             {
                 var id = IDs[i];
-                if (profits.TryGetValue(id, out var paying) == false) {
+                if (profits.TryGetValue(id, out var paying) == false)
+                {
                     NormalizedSMAData[i] = -1;
                     continue;
                 }
@@ -478,6 +489,6 @@ namespace NHMCore.Mining
             }
         }
 
-#endregion
+        #endregion
     }
 }

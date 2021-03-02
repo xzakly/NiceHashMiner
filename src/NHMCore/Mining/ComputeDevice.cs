@@ -292,7 +292,6 @@ namespace NHMCore.Mining
                 PluginAlgorithmSettings.Add(pluginConf);
             }
 
-            // TODO save removed algorithm configs
             var toRemove = AlgorithmSettings.Where(algo => algo.Algorithm.MinerID == pluginUUID);
             if (toRemove.Count() == 0) return;
             foreach (var removeAlgo in toRemove)
@@ -326,7 +325,7 @@ namespace NHMCore.Mining
         public void CopyBenchmarkSettingsFrom(ComputeDevice copyBenchCDev)
         {
             foreach (var copyFromAlgo in copyBenchCDev.AlgorithmSettings)
-            { 
+            {
                 var setAlgo = AlgorithmSettings.FirstOrDefault(a => a.AlgorithmStringID == copyFromAlgo.AlgorithmStringID);
                 if (setAlgo != null)
                 {
@@ -365,7 +364,7 @@ namespace NHMCore.Mining
             //Enabled = config.Enabled;
             Enabled = config.Enabled;
             MinimumProfit = config.MinimumProfit;
-           
+
             if (!DeviceMonitorManager.DisableDevicePowerModeSettings)
             {
                 var tdpSimpleDefault = TDPSimpleType.HIGH;
@@ -431,7 +430,7 @@ namespace NHMCore.Mining
         public DeviceConfig GetDeviceConfig()
         {
             var TDPSettings = new DeviceTDPSettings { SettingType = TDPSettingType.UNSUPPORTED };
-            if(DeviceMonitor is ITDP tdp)
+            if (DeviceMonitor is ITDP tdp)
             {
                 if (DeviceMonitorManager.DisableDevicePowerModeSettings)
                 {

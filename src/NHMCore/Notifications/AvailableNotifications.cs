@@ -32,6 +32,17 @@ namespace NHMCore.Notifications
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
 
+        public static void CreateEthlargementNotEnabledInfo()
+        {
+            var notification = new Notification(NotificationsType.Info, NotificationsGroup.EthlargementNotEnabled, Tr("EthLargement-Pill not enabled"), Tr("EthLargement-Pill is not enabled. is not running. Enable it for 50% higher hashrates. Run NiceHash Miner as an Administrator and enable Run Ethlargement in advanced settings."));
+            notification.Action = new NotificationAction
+            {
+                Info = Tr("Run As Administrator"),
+                Action = () => { RunAsAdmin.SelfElevate(); }
+            };
+            NotificationsManager.Instance.AddNotificationToList(notification);
+        }
+
         public static void CreateConnectionLostInfo()
         {
             var notification = new Notification(NotificationsType.Error, NotificationsGroup.ConnectionLost, Tr("Check internet connection"), Tr("NiceHash Miner requires internet connection to run. Please ensure that you are connected to the internet before running NiceHash Miner."));
@@ -76,7 +87,7 @@ namespace NHMCore.Notifications
             notification.Action = new NotificationAction
             {
                 Info = Tr("Help"),
-                Action = () => {Process.Start(Links.NhmNoDevHelp); }
+                Action = () => { Process.Start(Links.NhmNoDevHelp); }
             };
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
@@ -92,6 +103,16 @@ namespace NHMCore.Notifications
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
 
+        public static void CreateMissingGPUsInfo()
+        {
+            var notification = new Notification(
+                NotificationsType.Warning,
+                NotificationsGroup.MissingGPUs,
+                Tr("Missing GPUs"),
+                Tr("There are missing GPUs from inital NiceHash Miner startup. This is usually caused by driver crashes and usually requires system restart to recover."));
+            NotificationsManager.Instance.AddNotificationToList(notification);
+        }
+
         public static void CreateNhmUpdateInfoDownload(bool isInstallerVersion)
         {
             var notification = new Notification(NotificationsType.Info, NotificationsGroup.NhmUpdate, Tr("NiceHash Miner Update"), Tr("New version of NiceHash Miner is available."));
@@ -102,13 +123,15 @@ namespace NHMCore.Notifications
                     Info = Tr("Download updater"),
                     Action = () =>
                     {
-                        ApplicationStateManager.App.Dispatcher.Invoke(async () => {
+                        ApplicationStateManager.App.Dispatcher.Invoke(async () =>
+                        {
                             var ok = await UpdateHelpers.StartDownloadingUpdater(isInstallerVersion);
                             if (!ok)
                             {
                                 CreateNhmUpdateAttemptFail();
                             }
-                            else {
+                            else
+                            {
                                 NotificationsManager.Instance.RemoveNotificationFromList(notification);
                                 CreateNhmUpdateInfoUpdate();
                             }
@@ -132,7 +155,8 @@ namespace NHMCore.Notifications
                     Info = Tr("Start updater"),
                     Action = () =>
                     {
-                        ApplicationStateManager.App.Dispatcher.Invoke(async () => {
+                        ApplicationStateManager.App.Dispatcher.Invoke(async () =>
+                        {
                             var ok = await UpdateHelpers.StartUpdateProcess();
                             if (!ok) CreateNhmUpdateAttemptFail();
                         });
@@ -194,11 +218,11 @@ namespace NHMCore.Notifications
                 //clean previous notification
                 NotificationsManager.Instance.Notifications.Remove(pluginNotification);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.Error("Notifications", ex.Message);
             }
-            
+
             var notification = new Notification(NotificationsType.Info, NotificationsGroup.PluginUpdate, Tr("Miner Plugin Update"), content);
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
@@ -220,7 +244,7 @@ namespace NHMCore.Notifications
             notification.Action = new NotificationAction
             {
                 Info = Tr("Help"),
-                Action = () => { Process.Start(Links.AMDComputeModeHelp_PRODUCTION); }
+                Action = () => { Process.Start(Links.AMDComputeModeHelp); }
             };
             notification.NotificationUUID = "AMDModeSwitchNotification";
             NotificationsManager.Instance.AddNotificationToList(notification);
@@ -252,6 +276,11 @@ namespace NHMCore.Notifications
         public static void CreateFailedBenchmarksInfo(ComputeDevice device)
         {
             var notification = new Notification(NotificationsType.Info, NotificationsGroup.FailedBenchmarks, Tr("Failed benchmarks"), Tr("Some benchmarks for {0} failed to execute. Check benchmark tab for more info.", device.Name));
+            notification.Action = new NotificationAction
+            {
+                Info = Tr("Help"),
+                Action = () => { Process.Start(Links.FailedBenchmarkHelp); }
+            };
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
 
@@ -302,7 +331,7 @@ namespace NHMCore.Notifications
             var notification = new Notification(NotificationsType.Error, NotificationsGroup.OpenClFallback, Tr("Fallback of OpenCL"), Tr("Please check if AMD drivers are installed properly. If they are please remove Intel video driver."));
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
-    
+
         public static void CreateNoAvailableAlgorithmsInfo()
         {
             var notification = new Notification(NotificationsType.Error, NotificationsGroup.NoAvailableAlgorithms, Tr("No available algorithms"), Tr("There are no available algorithms to mine. Please check you rig stability and stability of installed plugins."));
@@ -313,11 +342,29 @@ namespace NHMCore.Notifications
         {
             //clean previous
             var logUploadNotifications = NotificationsManager.Instance.Notifications.Where(notif => notif.Group == NotificationsGroup.LogArchiveUpload).FirstOrDefault();
-            if(logUploadNotifications != null) logUploadNotifications.RemoveNotification();
+            if (logUploadNotifications != null) logUploadNotifications.RemoveNotification();
 
             var sentence = Tr("was uploaded.");
             if (!success) sentence = Tr("was not uploaded. Please contact our support team for help.");
-            var notification = new Notification(NotificationsType.Info, NotificationsGroup.LogArchiveUpload, Tr("Log archive upload result"), Tr("The log archive with the following ID: {0}", uuid) +" "+ sentence);
+            var notification = new Notification(NotificationsType.Info, NotificationsGroup.LogArchiveUpload, Tr("Log archive upload result"), Tr("The log archive with the following ID: {0}", uuid) + " " + sentence);
+            NotificationsManager.Instance.AddNotificationToList(notification);
+        }
+
+        public static void CreateFailedNVMLInitInfo()
+        {
+            var notification = new Notification(NotificationsType.Warning, NotificationsGroup.NVMLInitFail, Tr("Failed NVML Initialization"), Tr("NVML was not initialized. Try to reinstall drivers - recommended standard drivers over DCH. Also you could try to restart Windows."));
+            NotificationsManager.Instance.AddNotificationToList(notification);
+        }
+
+        public static void CreateFailedNVMLLoadInfo()
+        {
+            var notification = new Notification(NotificationsType.Warning, NotificationsGroup.NVMLLoadFail, Tr("Failed NVML Load"), Tr("NVML was not loaded. Try to reinstall drivers - recommended standard drivers over DCH. Also you could try to restart Windows."));
+            NotificationsManager.Instance.AddNotificationToList(notification);
+        }
+
+        public static void CreateWarningNVIDIADCHInfo()
+        {
+            var notification = new Notification(NotificationsType.Warning, NotificationsGroup.NvidiaDCH, Tr("Nvidia DCH drivers detected"), Tr("Detected drivers are not recommended for mining with NiceHash Miner. Please change them for optimal performance."));
             NotificationsManager.Instance.AddNotificationToList(notification);
         }
     }

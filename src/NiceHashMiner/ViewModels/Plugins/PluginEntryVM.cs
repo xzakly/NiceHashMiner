@@ -1,11 +1,11 @@
 ﻿using NHM.Common;
-using NiceHashMiner.ViewModels.Models;
-using NHMCore;
 using NHMCore.Mining.Plugins;
+using NiceHashMiner.ViewModels.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using static NHMCore.Translations;
@@ -91,7 +91,7 @@ namespace NiceHashMiner.ViewModels.Plugins
 
         public PluginEntryVM(PluginPackageInfoCR plugin)
             : this(plugin, new LoadProgress())
-        {}
+        { }
 
         protected override void Dispose(bool disposing)
         {
@@ -154,7 +154,7 @@ namespace NiceHashMiner.ViewModels.Plugins
             {
                 CommonInstallOnPropertyChanged();
             }
-                
+
         }
 
         private void Plugin_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -176,22 +176,15 @@ namespace NiceHashMiner.ViewModels.Plugins
             if (Plugin.Installed && !Plugin.HasNewerVersion) return;
             //if (Plugin.HasNewerVersion) return;
 
-            await MinerPluginsManager.DownloadAndInstall(Plugin.PluginUUID, Progress);
+            await MinerPluginsManager.DownloadAndInstall(Plugin.PluginUUID, Progress, CancellationToken.None);
             CommonInstallOnPropertyChanged();
         }
 
-        public async Task ConfirmInstallOrUpdatePlugin()
-        {
-            if (Load.IsInstalling) return;
-            await MinerPluginsManager.DownloadAndInstall(Plugin.PluginUUID, Progress);
-            CommonInstallOnPropertyChanged();
-        }
-
-        public void UninstallPlugin()
+        public async Task UninstallPlugin()
         {
             if (Load.IsInstalling) return;
             if (!Plugin.Installed) return;
-            MinerPluginsManager.RemovePlugin(Plugin.PluginUUID);
+            await MinerPluginsManager.RemovePlugin(Plugin.PluginUUID);
 
             CommonInstallOnPropertyChanged();
         }

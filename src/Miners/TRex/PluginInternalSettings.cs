@@ -1,6 +1,6 @@
-﻿using NHM.MinerPluginToolkitV1.Configs;
+﻿using NHM.Common.Enums;
+using NHM.MinerPluginToolkitV1.Configs;
 using NHM.MinerPluginToolkitV1.ExtraLaunchParameters;
-using NHM.Common.Enums;
 using System;
 using System.Collections.Generic;
 
@@ -287,6 +287,15 @@ namespace TRex
                     Type = MinerOptionType.OptionWithSingleParameter,
                     ID = "trex_scriptLowHash",
                     ShortName = "--script-low-hash"
+                },
+                /// <summary>
+                /// Executes user script right before miner exit.
+                /// </summary>
+                new MinerOption
+                {
+                    Type = MinerOptionType.OptionWithSingleParameter,
+                    ID = "trex_scriptExit",
+                    ShortName = "--script-exit"
                 }
             },
             TemperatureOptions = new List<MinerOption>

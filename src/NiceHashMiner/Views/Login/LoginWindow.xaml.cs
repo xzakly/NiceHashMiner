@@ -1,25 +1,15 @@
-﻿using NiceHashMiner.Views.Common;
-using NiceHashMiner.Views.Common.NHBase;
+﻿using Newtonsoft.Json;
+using NHMCore;
 using NHMCore.Configs;
 using NHMCore.Utils;
-using System.Diagnostics;
-using System.Windows;
-using System.Windows.Media;
-using ZXing.Rendering;
-using ZXing;
-using ZXing.QrCode.Internal;
-using System.Drawing;
-using ZXing.Common;
-using System.IO;
-using System.Windows.Media.Imaging;
-using System.Drawing.Imaging;
-using System.Net.Http;
-using NHMCore;
+using NiceHashMiner.Views.Common;
+using NiceHashMiner.Views.Common.NHBase;
 using System;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Net.Http;
 using System.Text;
-using Newtonsoft.Json;
-using NiceHashMiner.ViewModels;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace NiceHashMiner.Views.Login
 {
@@ -28,14 +18,30 @@ namespace NiceHashMiner.Views.Login
     /// </summary>
     public partial class LoginWindow : BaseDialogWindow
     {
+        private LoginBrowser _loginBrowser;
         private string _uuid = Guid.NewGuid().ToString();
         public LoginWindow()
         {
             InitializeComponent();
+            Unloaded += LoginBrowser_Unloaded;
             HideIconAndTitle = true;
             Translations.LanguageChanged += (s, e) => WindowUtils.Translate(this);
             _ = ProcessQRCode();
         }
+
+        private void LoginBrowser_Unloaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_loginBrowser != null) _loginBrowser.AllowClose = true;
+                _loginBrowser?.ForceCleanup();
+                _loginBrowser?.Close();
+            }
+            catch
+            { }
+        }
+
+        public bool? LoginSuccess { get; private set; } = null;
 
         private void CheckBoxMode_Checked(object sender, RoutedEventArgs e)
         {
@@ -64,8 +70,21 @@ namespace NiceHashMiner.Views.Login
         private void Login_OnClick(object sender, RoutedEventArgs e)
         {
             Hide();
-            var browser = new LoginBrowser();
-            browser.ShowDialog();
+            if (_loginBrowser == null) _loginBrowser = new LoginBrowser();
+            _loginBrowser.Top = this.Top;
+            _loginBrowser.Left = this.Left;
+            _loginBrowser.ShowDialog();
+            LoginSuccess = _loginBrowser.LoginSuccess;
+            this.Top = _loginBrowser.Top;
+            this.Left = _loginBrowser.Left;
+            if (!CredentialsSettings.Instance.IsBitcoinAddressValid)
+            {
+                ShowDialog();
+            }
+            else
+            {
+                Close();
+            }
         }
 
         private async Task ProcessQRCode()

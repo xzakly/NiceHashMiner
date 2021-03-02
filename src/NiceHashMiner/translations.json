@@ -2715,7 +2715,7 @@
       "ru": "Не удаётся получить данные прибыльности NiceHash. Если вы подключены к интернету, попробуйте снова позже.",
       "zh_cn": "无法获取NiceHash收益数据。如果您确信您已连接至互联网，请稍后重试。"
     },
-    "Unzipping {0} %": {
+    "Extracting {0} %": {
       "bg": "Разархивиране на {0} %",
       "es": "Descomprimiendo {0} %",
       "pl": "Wypakowywanie {0} %",
@@ -4041,6 +4041,70 @@
     },
     "Update procedure failed please install manually.": {
       "ru": "Процедура обновления не удалась, пожалуйста, установите вручную."
+    },
+    "Add your ": {
+      "ru": "Добавьте свой "
+    },
+    "Bitcoin Wallet Address": {
+      "ru": "адрес Биткоин-кошелька"
+    },
+    "We strongly suggest using the wallet address provided on the NiceHash platform.": {
+      "ru": "Мы настоятельно рекомендуем использовать адрес кошелька, предоставленный платформой NiceHash."
+    },
+    "Using any other Bitcoin wallet address will result in a higher 5% fee and infrequent payouts.": {
+      "ru": "Использование адреса любого другого Биткоин-кошелька приведет к высшей комиссии в размере 5% и редким выплатам."
+    },
+    "DEMO mode will not earn Bitcoins!": {
+      "ru": "В режиме ДЕМО не зарабатываются биткоины!"
+    },
+    "EthLargement-Pill not enabled": {
+      "ru": "EthLargement-Pill не включен"
+    },
+    "EthLargement-Pill is not enabled. Enable it for 50% higher hashrates. Run NiceHash Miner as an Administrator and enable Run Ethlargement in advanced settings.": {
+      "ru": "EthLargement-Pill не включен. Включите для увеличения скорости майнинга на 50%. Запустите NiceHash от имени администратора и включите Запустить Ethlargement в расширенных настройках."
+    },
+    "Check this setting if you would like NiceHash Miner to check for missing GPUs every 5 minutes.": {
+      "ru": "Включите эту настройку, если вы хотели бы, чтобы NiceHash Miner каждые 5 минут проверял, работают ли видеокарты."
+    },
+    "Check this setting if you would like to run 'OnGPUsLost.bat' script when GPU is lost. By default the script restarts Windows. Users can modify the script for custom behaviour.": {
+      "ru": "Включите эту настройку, если вы хотели бы запускать скрипт 'OnGPUsLost.bat' при потере видеокарты. По умолчанию скрипт перезагружает Windows. Пользователи могут изменять поведение скрипта."
+    },
+    "Missing GPUs": {
+      "ru": "Видеокарты отсутствуют"
+    },
+    "There are missing GPUs from inital NiceHash Miner startup. This is usually caused by driver crashes and usually requires system restart to recover.": {
+      "ru": "Отсутствуют видеокарты, которые были при первом запуске NiceHash Miner. Причиной этому обычно бывает сбой драйвера, и для восстановления требуется перезагрузка системы."
+    },
+    "NiceHash Miner restart is required.": {
+      "ru": "Требуется перезапуск NiceHash Miner."
+    },
+    "Failed NVML Initialization": {
+      "ru": "Инициализация NVML не удалась"
+    },
+    "NVML was not initialized. Try to reinstall drivers - recommended standard drivers over DCH. Also you could try to restart Windows.": {
+      "ru": "NVML не был инициализирован. Попробуйте переустановить драйверы — рекомендуются стандартные драйверы, а не DCH. Также вы можете попробовать перезапустить Windows."
+    },
+    "Failed NVML Load": {
+      "ru": "Загрузка NVML не удалась"
+    },
+    "NVML was not loaded. Try to reinstall drivers - recommended standard drivers over DCH. Also you could try to restart Windows.": {
+      "ru": "NVML не был загружен. Попробуйте переустановить драйверы — рекомендуются стандартные драйверы, а не DCH. Также вы можете попробовать перезапустить Windows."
+    },
+    "Unable to retreive BTC address. Please retreive it by yourself from web page.": {
+      "ru": "Невозможно получить Биткоин-адрес. Пожалуйста, получите его самостоятельно с веб-сайта."
+    },
+    "Login performed successfully.": {
+      "ru": "Вход был выполнен успешно."
+    },
+    "Something went wrong": {
+      "ru": "Что-то пошло не так"
+    },
+    "Try Again": {
+      "ru": "Попробуйте снова"
+    },
+    "Return and enter Bitcoin address manually": {
+      "ru": "Вернитесь и введите Биткоин-адрес вручную"
     }
+
   }
 }
