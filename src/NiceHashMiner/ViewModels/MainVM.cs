@@ -206,7 +206,7 @@ namespace NiceHashMiner.ViewModels
 
         public string GlobalRateFiat => $"≈ {(WorkingMiningDevs?.Sum(d => d.FiatPayrate) ?? 0):F2} {BalanceAndExchangeRates.SelectedFiatCurrency}{PerTime}";
 
-
+        public string MinimumProfitString => $"Minimum Profit ({BalanceAndExchangeRates.SelectedFiatCurrency}/day)";
         #endregion
 
         #region MinerPlugins
@@ -286,6 +286,14 @@ namespace NiceHashMiner.ViewModels
             {
                 NHMWSConnected = nhmwsConnected;
                 OnPropertyChanged(nameof(NHMWSConnected));
+            };
+
+            BalanceAndExchangeRates.Instance.PropertyChanged += (_, e) =>
+            {
+                if(e.PropertyName == nameof(BalanceAndExchangeRates.SelectedFiatCurrency))
+                {
+                    OnPropertyChanged(nameof(MinimumProfitString));
+                }
             };
         }
 

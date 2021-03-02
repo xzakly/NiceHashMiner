@@ -125,6 +125,7 @@ namespace NHMCore.ApplicationState
                 // TODO make sure you can set this fiat currency
                 _fiatCurrency = value;
                 CalculateFiatBalance();
+                OnPropertyChanged(nameof(SelectedFiatCurrency));
             }
         }
         //public bool ContainsFiatCurrency { get; set; }
