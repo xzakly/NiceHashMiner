@@ -88,7 +88,7 @@ namespace CreateSnapshot
                              echo !key!
 		                ) || (
                           REM echo Did not find ""HKEY""
-                          REM echo to je k %% k
+                          REM echo k %% k
                           for /F ""tokens=1-3"" %%a in (""%%k"") do (
                           echo Value name %%a
                           echo Type %%b
