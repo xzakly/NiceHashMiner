@@ -69,6 +69,16 @@ namespace SRBMiner
                     ShortName = "--gpu-tweak-profile"
                 },
                 /// <summary>
+                /// number from 0-50, separate values with ; and !
+                /// </summary>
+                new MinerOption
+                {
+                    Type = MinerOptionType.OptionWithMultipleParameters,
+                    ID = "srbminer_gpu_boost",
+                    ShortName = "--gpu-boost",
+                    Delimiter = "!"
+                },
+                /// <summary>
                 /// use config file other than config.txt
                 /// </summary>
                 new MinerOption

@@ -1,4 +1,5 @@
-﻿using NHM.Common.Algorithm;
+﻿using NHM.Common;
+using NHM.Common.Algorithm;
 using NHM.Common.Device;
 using NHM.Common.Enums;
 using NHM.MinerPlugin;
@@ -7,6 +8,7 @@ using NHM.MinerPluginToolkitV1.Configs;
 using NHM.MinerPluginToolkitV1.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -37,7 +39,7 @@ namespace SRBMiner
             };
         }
 
-        public override Version Version => new Version(15, 3);
+        public override Version Version => new Version(15, 4);
 
         public override string Name => "SRBMiner";
 
@@ -83,15 +85,24 @@ namespace SRBMiner
         public async Task DevicesCrossReference(IEnumerable<BaseDevice> devices)
         {
             if (_mappedDeviceIds.Count == 0) return;
-            // TODO will block
-            var minerBinPath = GetBinAndCwdPaths().Item1;
+            var (minerBinPath, minerCwdPath) = GetBinAndCwdPaths();
             var output = await DevicesCrossReferenceHelpers.MinerOutput(minerBinPath, "--list-devices");
+            var ts = DateTime.UtcNow.Ticks;
+            var dumpFile = $"d{ts}.txt";
+            try
+            {
+                File.WriteAllText(Path.Combine(minerCwdPath, dumpFile), output);
+            }
+            catch (Exception e)
+            {
+                Logger.Error("LolMinerPlugin", $"DevicesCrossReference error creating dump file ({dumpFile}): {e.Message}");
+            }
             var mappedDevs = DevicesListParser.ParseSRBMinerOutput(output, devices.ToList());
 
             foreach (var kvp in mappedDevs)
             {
-                var uuid = kvp.Key;
-                var indexID = kvp.Value;
+                var uuid = kvp.uuid;
+                var indexID = kvp.gpuIndex;
                 _mappedDeviceIds[uuid] = indexID;
             }
         }
