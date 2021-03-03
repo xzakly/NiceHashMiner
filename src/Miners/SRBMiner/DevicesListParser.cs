@@ -16,10 +16,7 @@ namespace SRBMiner
         private static bool KeepLine(string line) => _keywords.All(word => line?.Contains(word) ?? false);
 
         const string HexAlphabet = "0123456789abcdef";
-        private static bool IsHexChar(char c)
-        {
-            return HexAlphabet.Contains(char.ToLower(c));            
-        }
+        private static bool IsHexChar(char c) => HexAlphabet.Contains(char.ToLower(c));                   
 
         private static int? NumberAfterPatternGeneric(string pattern, string line, Func<char, bool> isDigit, NumberStyles numberStyles)
         {
@@ -31,7 +28,7 @@ namespace SRBMiner
                 var numericChars = line
                     .Substring(index + pattern.Length)
                     .SkipWhile(c => !isDigit(c))
-                    .TakeWhile(c => isDigit(c))
+                    .TakeWhile(isDigit)
                     .ToArray();
                 var numberString = new string(numericChars);
                 if (int.TryParse(numberString, numberStyles, CultureInfo.InvariantCulture, out var number)) return number;
