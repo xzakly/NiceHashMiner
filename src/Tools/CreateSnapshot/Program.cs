@@ -1,5 +1,4 @@
 ﻿using Microsoft.Win32;
-using NHM.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,19 +23,14 @@ namespace CreateSnapshot
                 switch (args[0])
                 {
                     case "-push":
-                        //CreateSnapshotOfRegistries(path);
                         CreateSnapshotArchive(path, snapTag);
                         break;
                     case "-pop":
                         UnzipSnapshot(path);
-                        //var registryJson = File.ReadAllText(Path.Combine(args[1], "snapshots", "registryKeys.json"));
-                        //SaveRegistryValues(registryJson);
                         break;
                     default:
                         break;
                 }
-                //CreateSnapshotArchive(args[1], tag);
-                //UnzipSnapshot(args[1]);
             }
             catch (Exception e)
             {
@@ -78,47 +72,36 @@ namespace CreateSnapshot
                     }
                 }
             }
-        }
 
-        private static void CreateSnapshotOfRegistries(string nhmRootPath)
-        {
-            var registryValues = new List<Tuple<string, string, string, object>>();
-            var val = Registry.GetValue("HKEY_LOCAL_MACHINE" + @"\SOFTWARE\Microsoft\Cryptography", "MachineGuid", "nonExisting");
-            if (val.ToString() != "nonExisting") registryValues.Add(Tuple.Create("HKEY_LOCAL_MACHINE", @"SOFTWARE\Microsoft\Cryptography\", "MachineGuid", val)); //string
+            //create unzip bat script
+            var scriptContent = $@"rem this script should be located inside %NHM_ROOT_PATH%\tools
+                echo %cd% 
+                .\CreateSnapshot.exe -pop %cd%\{snapTag}.zip               
+                cd ..\
+                echo %cd% 
+                @echo off
+                setlocal ENABLEDELAYEDEXPANSION
+                for /f ""tokens=*"" %%k in (registrySnapshot.txt) do (		
+                        echo.%%~k | FIND /I ""HKEY"">Nul && (
+                             REM echo Found ""HKEY""
+                             set key=%%~k
+                             echo !key!
+		                ) || (
+                          REM echo Did not find ""HKEY""
+                          REM echo to je k %% k
+                          for /F ""tokens=1-3"" %%a in (""%%k"") do (
+                          echo Value name %%a
+                          echo Type %%b
+                          echo Data %%c
+                          reg add !key! /f /v %%a /t %%b /d %%c
+		                  )
+		                )
+	                )
+	
+                endlocal
+                pause";
 
-            val = Registry.GetValue("HKEY_CURRENT_USER" + @"\SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "NiceHash Miner", "nonExisting");
-            if (val.ToString() != "nonExisting") registryValues.Add(Tuple.Create("HKEY_CURRENT_USER", @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run\", "NiceHash Miner", val)); //string
-
-            val = Registry.GetValue("HKEY_CURRENT_USER" + @"\SOFTWARE\Microsoft\Windows\Windows Error Reporting", "DontShowUI", "nonExisting");
-            if (val.ToString() != "nonExisting") registryValues.Add(Tuple.Create("HKEY_CURRENT_USER", @"SOFTWARE\Microsoft\Windows\Windows Error Reporting\", "DontShowUI", val)); //int
-
-            var regKey = Registry.CurrentUser.OpenSubKey(@"Software\" + APP_GUID.GUID);
-            if (regKey != null)
-            {
-                var subKeys = regKey.GetValueNames();
-                foreach (var subKey in subKeys)
-                {
-                    val = regKey.GetValue(subKey, "nonExisting");
-                    if (val.ToString() != "nonExisting") registryValues.Add(Tuple.Create("HKEY_CURRENT_USER", $"SOFTWARE\\{APP_GUID.GUID}\\", subKey, val));
-                }
-            }
-
-
-            regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\" + APP_GUID.GUID);
-            if (regKey != null)
-            {
-                var subKeys = regKey.GetValueNames();
-                foreach (var subKey in subKeys)
-                {
-                    val = regKey.GetValue(subKey, "nonExisting");
-                    if (val.ToString() != "nonExisting") registryValues.Add(Tuple.Create("HKEY_CURRENT_USER", $"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_GUID.GUID}\\", subKey, val));
-                }
-            }
-
-            var serializedRegistries = Newtonsoft.Json.JsonConvert.SerializeObject(registryValues);
-            var snapshotsLocation = Path.Combine(nhmRootPath, "snapshots");
-            if (!Directory.Exists(snapshotsLocation)) Directory.CreateDirectory(snapshotsLocation);
-            File.WriteAllText(Path.Combine(snapshotsLocation, "registryKeys.json"), serializedRegistries);
+            File.WriteAllText(Path.Combine(snapshotsLocation, $"{snapTag}.bat"), scriptContent);
         }
 
         private static void UnzipSnapshot(string snapshotPath)
@@ -149,32 +132,6 @@ namespace CreateSnapshot
             }
 
             ZipFile.ExtractToDirectory(snapshotPath, nhmRootPath);
-        }
-
-        private static void SaveRegistryValues(string registryJson)
-        {
-            var savedRegistryEntries = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Tuple<string, string, string, object>>>(registryJson);
-            foreach (var regEntry in savedRegistryEntries)
-            {
-                var typeOfRegistry = regEntry.Item1;
-                var keyName = regEntry.Item2;
-                var valueName = regEntry.Item3;
-                var value = regEntry.Item4;
-
-                switch (typeOfRegistry)
-                {
-                    //case "HKEY_LOCAL_MACHINE":
-                    //    var localKey = Registry.LocalMachine.OpenSubKey(keyName, true);
-                    //    localKey.SetValue(valueName, value);
-                    //    break;
-                    case "HKEY_CURRENT_USER":
-                        var userKey = Registry.CurrentUser.OpenSubKey(keyName, true);
-                        userKey.SetValue(valueName, value);
-                        break;
-                    default:
-                        break;
-                }
-            }
         }
     }
 }

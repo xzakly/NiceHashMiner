@@ -301,3 +301,5 @@ installer/*.exe
 
 prepare_installers.bat
 prepare_release.bat
+
+src/Tools/registrySnapshot.txt
