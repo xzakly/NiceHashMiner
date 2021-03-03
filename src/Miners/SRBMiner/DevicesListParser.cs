@@ -16,7 +16,7 @@ namespace SRBMiner
         private static bool KeepLine(string line) => _keywords.All(word => line?.Contains(word) ?? false);
 
         const string HexAlphabet = "0123456789abcdef";
-        private static bool IsHexChar(char c) => HexAlphabet.Contains(char.ToLower(c));                   
+        private static bool IsHexChar(char c) => HexAlphabet.Contains(char.ToLower(c));
 
         private static int? NumberAfterPatternGeneric(string pattern, string line, Func<char, bool> isDigit, NumberStyles numberStyles)
         {
@@ -71,7 +71,7 @@ namespace SRBMiner
 
                 return mappedDevices;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.Error("SRBMinerPlugin", $"DevicesListParser error: {ex.Message}");
                 return Enumerable.Empty<(string uuid, int gpuId)>();

@@ -99,12 +99,7 @@ namespace SRBMiner
             }
             var mappedDevs = DevicesListParser.ParseSRBMinerOutput(output, devices.ToList());
 
-            foreach (var kvp in mappedDevs)
-            {
-                var uuid = kvp.uuid;
-                var indexID = kvp.gpuIndex;
-                _mappedDeviceIds[uuid] = indexID;
-            }
+            foreach (var (uuid, gpuIndex) in mappedDevs) _mappedDeviceIds[uuid] = gpuIndex;
         }
 
         public override IEnumerable<string> CheckBinaryPackageMissingFiles()
