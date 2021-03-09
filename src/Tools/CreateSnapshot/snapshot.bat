@@ -22,4 +22,7 @@ for %%x in (
 @echo on
 
 .\tools\CreateSnapshot.exe -push %cd%
+
+del registrySnapshot.txt
+
 pause

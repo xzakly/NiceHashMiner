@@ -78,27 +78,32 @@ namespace CreateSnapshot
                 echo %cd% 
                 .\CreateSnapshot.exe -pop %cd%\{snapTag}.zip               
                 cd ..\
-                echo %cd% 
-                @echo off
-                setlocal ENABLEDELAYEDEXPANSION
-                for /f ""tokens=*"" %%k in (registrySnapshot.txt) do (		
-                        echo.%%~k | FIND /I ""HKEY"">Nul && (
-                             REM echo Found ""HKEY""
-                             set key=%%~k
-                             echo !key!
-		                ) || (
-                          REM echo Did not find ""HKEY""
-                          REM echo k %% k
-                          for /F ""tokens=1-3"" %%a in (""%%k"") do (
-                          echo Value name %%a
-                          echo Type %%b
-                          echo Data %%c
-                          reg add !key! /f /v %%a /t %%b /d %%c
-		                  )
-		                )
-	                )
-	
-                endlocal
+
+                if exist registrySnapshot.txt (
+                    echo %cd% 
+                    @echo off
+                    setlocal ENABLEDELAYEDEXPANSION
+                    for /f ""tokens=*"" %%k in (registrySnapshot.txt) do (		
+                            echo.%%~k | FIND /I ""HKEY"">Nul && (
+                                REM echo Found ""HKEY""
+                                set key=%%~k
+                                echo !key!
+                            ) || (
+                                REM echo Did not find ""HKEY""
+                                REM echo k %% k
+                                for /F ""tokens=1-3"" %%a in (""%%k"") do (
+                                    echo Value name %%a
+                                    echo Type %%b
+                                    echo Data %%c
+                                    reg add !key! /f /v %%a /t %%b /d %%c
+                                )
+                            )
+                        )
+                    endlocal
+                ) else (
+                    echo ""No registrySnapshot.txt found""
+                )
+
                 pause";
 
             File.WriteAllText(Path.Combine(snapshotsLocation, $"{snapTag}.bat"), scriptContent);
