@@ -100,6 +100,7 @@ namespace CreateSnapshot
                             )
                         )
                     endlocal
+                    del registrySnapshot.txt
                 ) else (
                     echo ""No registrySnapshot.txt found""
                 )
