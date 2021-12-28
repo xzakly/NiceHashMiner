@@ -30,7 +30,7 @@ namespace GMinerPlugin
                 ExePath = new List<string> { "miner.exe" },
                 Urls = new List<string>
                 {
-                    "https://github.com/develsoftware/GMinerRelease/releases/download/2.54/gminer_2_54_windows64.zip", // original
+                    "https://github.com/develsoftware/GMinerRelease/releases/download/2.74/gminer_2_74_windows64.zip", // original
                 }
             };
             PluginMetaInfo = new PluginMetaInfo
@@ -42,7 +42,7 @@ namespace GMinerPlugin
 
         public override string PluginUUID => "e7a58030-94eb-11ea-a64d-17be303ea466";
 
-        public override Version Version => new Version(16, 2);
+        public override Version Version => new Version(16, 3);
 
         public override string Name => "GMinerCuda9.0+";
 
